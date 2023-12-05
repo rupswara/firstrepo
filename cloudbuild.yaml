@@ -1,0 +1,52 @@
+steps:
+  #  deploy workflow
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: "workflow"
+    dir: '/workspace/$TRIGGER_NAME'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e  
+        echo ${pwd}
+        
+        cd $TRIGGER_NAME
+      
+        echo "CBL starts"   
+      
+        destFile="deploy.properties"
+      
+        echo "dest file assigned"   
+
+        source=$(cat "$destFile" | grep 'source' | awk '{print $2}')
+      
+        export source="$source"
+      
+        echo $source   
+      
+        workFlowName=$(cat "$destFile" | grep 'workFlowName' | awk '{print $2}')
+      
+        export workFlowName="$workFlowName"
+      
+        echo $workFlowName           		
+      
+        echo "Working Directory: $(pwd)"
+      
+        gcloud workflows deploy "$workFlowName" --source="$source" --service-account=${_SERVICE_ACCOUNT} --project="$PROJECT_ID" 
+
+substitutions:
+    _SERVICE_ACCOUNT  : 'sa-pipeline@$PROJECT_ID.iam.gserviceaccount.com'         
+
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-pipeline@$PROJECT_ID.iam.gserviceaccount.com'
+logsBucket: ${_BUCKETNAME_VALUE}
+
+options:
+  substitutionOption: 'ALLOW_LOOSE'
+  dynamicSubstitutions: true
+  workerPool: 'projects/ford-158dd864a0d0bbb6f103ff24/locations/us-central1/workerPools/workerpool-app-us-central1'
+  env:
+    - 'http_proxy=http://internet.gcp.ford.com:83'
+    - 'https_proxy=http://internet.gcp.ford.com:83'
+    - 'no_proxy=127.0.0.1,0.0.0.0,::1,localhost,.ford.com,.local,.testing,.internal,.googleapis.com,19.0.0.0/8,136.1.0.0/16,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'
+  
+timeout: 1800s
